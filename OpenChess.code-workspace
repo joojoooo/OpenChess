@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"editor.formatOnSave": true,
+		"files.exclude": {
+			"src/web/build/**/*.css": true,
+			"src/web/build/**/*.html": true,
+			"src/web/build/**/*.js": true
+		},
+		"search.exclude": {
+			"src/web/build/**/*.css": true,
+			"src/web/build/**/*.html": true,
+			"src/web/build/**/*.js": true
+		},
+		"C_Cpp.clang_format_fallbackStyle": "Google"
+	}
+}

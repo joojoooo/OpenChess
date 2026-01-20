@@ -520,6 +520,7 @@ void ChessBot::showBotMoveIndicator(int fromRow, int fromCol, int toRow, int toC
 
 void ChessBot::waitForBotMoveCompletion(int fromRow, int fromCol, int toRow, int toCol, bool isCapture) {
   bool piecePickedUp = false;
+  bool capturedPieceRemoved = false;
   bool moveCompleted = false;
 
   Serial.println("Waiting for you to complete the bot's move...");
@@ -537,6 +538,14 @@ void ChessBot::waitForBotMoveCompletion(int fromRow, int fromCol, int toRow, int
   while (!moveCompleted) {
     _boardDriver->readSensors();
 
+    // For capture moves, ensure captured piece is removed first
+    if (isCapture && !capturedPieceRemoved) {
+      if (!_boardDriver->getSensorState(toRow, toCol)) {
+        capturedPieceRemoved = true;
+        Serial.println("Captured piece removed, now complete the bot's move...");
+      }
+    }
+
     // Check if piece was picked up from source
     if (!piecePickedUp && !_boardDriver->getSensorState(fromRow, fromCol)) {
       piecePickedUp = true;
@@ -544,9 +553,13 @@ void ChessBot::waitForBotMoveCompletion(int fromRow, int fromCol, int toRow, int
     }
 
     // Check if piece was placed on destination
+    // For captures: wait until captured piece is removed AND bot piece is placed
+    // For normal moves: just wait for bot piece to be placed
     if (piecePickedUp && _boardDriver->getSensorState(toRow, toCol)) {
-      moveCompleted = true;
-      Serial.println("Bot move completed on physical board!");
+      if (!isCapture || (isCapture && capturedPieceRemoved)) {
+        moveCompleted = true;
+        Serial.println("Bot move completed on physical board!");
+      }
     }
 
     delay(50);
