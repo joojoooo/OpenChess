@@ -125,9 +125,7 @@ void ChessBot::makeBotMove() {
     String validationError;
     if (StockfishAPI::validateUCIMove(bestMove, validationError, fromRow, fromCol, toRow, toCol)) {
       Serial.printf("Move string: %s Parsed: %c%c -> %c%c | Array coords: (%d,%d) to (%d,%d)", bestMove.c_str(), bestMove[0], bestMove[1], bestMove[2], bestMove[3], fromRow, fromCol, toRow, toCol);
-      if (bestMove.length() >= 5)
-        Serial.printf(" Promotion to: %c", bestMove[4]);
-      Serial.println("\n============================");
+      
       // Verify the move is from the correct color piece
       char piece = board[fromRow][fromCol];
       bool botPlaysWhite = !botConfig.playerIsWhite;
@@ -147,6 +145,7 @@ void ChessBot::makeBotMove() {
   }
 }
 
+// TODO: Merge with `processPlayerMove` to avoid code duplication and rename it to `processMove`
 void ChessBot::executeOpponentMove(int fromRow, int fromCol, int toRow, int toCol) {
   char piece = board[fromRow][fromCol];
   char capturedPiece = board[toRow][toCol];
@@ -184,6 +183,12 @@ void ChessBot::executeOpponentMove(int fromRow, int fromCol, int toRow, int toCo
     boardDriver->captureAnimation(toRow, toCol);
   } else {
     confirmSquareCompletion(toRow, toCol);
+  }
+
+  char promotedPiece = ' ';
+  if (applyPawnPromotionIfNeeded(toRow, toCol, piece, promotedPiece)) {
+    Serial.printf("Pawn promoted to %c\n", promotedPiece);
+    boardDriver->promotionAnimation(toCol);
   }
 }
 
