@@ -37,7 +37,7 @@
 // Pin 14 (SER) GPIO = Serial data input
 #define SR_SER_DATA_PIN 33
 // Set to 1 if the shift register outputs drive PNP transistors
-#define SR_INVERT_OUTPUTS 0
+#define SR_INVERT_OUTPUTS 1
 
 // ---------------------------
 // Row and column pins don't need to be in any particular order, calibration will map them correctly

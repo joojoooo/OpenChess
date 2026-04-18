@@ -38,7 +38,7 @@ void WiFiManagerESP32::begin() {
     autoOtaEnabled = prefs.getBool("autoUpdate", false);
     prefs.end();
   }
-
+  loadDeviceConfig();
   bool connected = connectToSavedProfile();
   Serial.println("==== WiFi Connection Information ====");
   if (connected) {
@@ -98,6 +98,39 @@ void WiFiManagerESP32::begin() {
   server.on("/games", HTTP_DELETE, [this](AsyncWebServerRequest* request) { this->handleDeleteGame(request); });
   server.on("/hardware-config", HTTP_GET, [this](AsyncWebServerRequest* request) { this->getHardwareConfigJSON(request); });
   server.on("/hardware-config", HTTP_POST, [this](AsyncWebServerRequest* request) { this->handleHardwareConfig(request); });
+  // Set device name
+  server.on(
+  "/device-config", HTTP_GET, 
+  [this](AsyncWebServerRequest* request) {
+      JsonDocument doc;
+      doc["deviceName"] = deviceName;
+      String output;
+      serializeJson(doc, output);
+      request->send(200, "application/json", output);
+  });
+  server.on(
+  "/device-config", HTTP_POST, 
+  [this](AsyncWebServerRequest* request) {
+      if (request->hasArg("name")) {
+          String newName = request->arg("name");
+          newName.trim();
+          if (newName.length() > 0 && newName.length() <= 32 && newName.indexOf(' ') == -1) {
+              setDeviceName(newName);
+              request->send(200, "text/plain", "Device name updated");
+              // Optionally restart mDNS after a delay
+              xTaskCreate([](void*) {
+                  delay(500);
+                  MDNS.end();
+                  // Restart with new name (will be picked up on next WiFi operation)
+                  vTaskDelete(NULL);
+              }, "mdns_restart", 2048, NULL, 1, NULL);
+          } else {
+              request->send(400, "text/plain", "Invalid name (1-32 chars, no spaces)");
+          }
+      } else {
+          request->send(400, "text/plain", "Missing name parameter");
+      }
+  });
   // OTA update endpoints
   server.on("/ota/status", HTTP_GET, [this](AsyncWebServerRequest* request) { this->handleOtaStatus(request); });
   server.on("/ota/settings", HTTP_POST, [this](AsyncWebServerRequest* request) { this->handleOtaSettings(request); });
@@ -508,6 +541,30 @@ void WiFiManagerESP32::handleHardwareConfig(AsyncWebServerRequest* request) {
   }
 }
 
+void WiFiManagerESP32::loadDeviceConfig() {
+  if (ChessUtils::ensureNvsInitialized()) {
+    prefs.begin("deviceConfig", false);
+    deviceName = prefs.getString("name", "OpenChess");
+    prefs.end();
+    Serial.println("Device name loaded: " + deviceName);
+  }
+}
+
+void WiFiManagerESP32::saveDeviceConfig() {
+  if (!ChessUtils::ensureNvsInitialized()) return;
+  prefs.begin("deviceConfig", false);
+  prefs.putString("name", deviceName);
+  prefs.end();
+  Serial.println("Device name saved: " + deviceName);
+}
+
+void WiFiManagerESP32::setDeviceName(const String& name) {
+  if (name.length() > 0 && name.length() <= 32) {
+    deviceName = name;
+    saveDeviceConfig();
+  }
+}
+
 LichessConfig WiFiManagerESP32::getLichessConfig() {
   LichessConfig config;
   config.apiToken = lichessToken;
@@ -707,9 +764,9 @@ bool WiFiManagerESP32::ensureConnected() {
 
 void WiFiManagerESP32::startMDNS() {
   MDNS.end();
-  if (MDNS.begin(MDNS_HOSTNAME)) {
+  if (MDNS.begin(deviceName.c_str())) {
     MDNS.addService("http", "tcp", HTTP_PORT);
-    Serial.println("mDNS started: http://" MDNS_HOSTNAME ".local");
+    Serial.println("mDNS started: http://" + deviceName + ".local");
   } else {
     Serial.println("mDNS failed to start");
   }
@@ -1020,7 +1077,7 @@ bool WiFiManagerESP32::tryConnect(const String& ssid, const String& password, co
   delay(100);
   WiFi.persistent(false);
   WiFi.setAutoReconnect(true);
-  WiFi.setHostname("OpenChess");
+  WiFi.setHostname(deviceName.c_str());
   WiFi.mode(WIFI_STA);
 
   int maxAttempts = isFast ? 5 : 10;
