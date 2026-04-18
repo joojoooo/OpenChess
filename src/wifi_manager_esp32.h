@@ -69,7 +69,10 @@ class WiFiManagerESP32 {
   Preferences prefs;
   String gameMode;
   String lichessToken;
-
+  
+  // Set device name
+  String deviceName = "OpenChess";
+  
   // Saved WiFi profiles (up to MAX_WIFI_PROFILES, index 0 = most recently connected)
   WiFiProfile profiles[MAX_WIFI_PROFILES];
   int profileCount;
@@ -193,7 +196,13 @@ class WiFiManagerESP32 {
  public:
   WiFiManagerESP32(BoardDriver* boardDriver, MoveHistory* moveHistory);
   void begin();
-
+  
+  // Set device name
+  void setDeviceName(const String& name);
+  String getDeviceName() const { return deviceName; }
+  void loadDeviceConfig();  // Call in begin()
+  void saveDeviceConfig();  // Call after updating name
+  
   // OTA update support
   OtaUpdater& getOtaUpdater() { return otaUpdater; }
   bool isAutoOtaEnabled() const { return autoOtaEnabled; }

@@ -45,7 +45,24 @@
                 </button>
             </div>
         </div>
-
+        <!-- Device Name Section -->
+        <div class="settings-section">
+            <div class="section-header" onclick="toggleSection('device')">
+                <span class="section-icon" id="device-icon">▶</span>
+                <h3>Device Settings</h3>
+            </div>
+            <div class="section-content" id="device-content">
+                <form id="deviceNameForm">
+                    <div class="form-group">
+                        <label for="deviceName">Device Name:</label>
+                        <input type="text" name="deviceName" id="deviceName" 
+                               placeholder="OpenChess" maxlength="32" required>
+                        <p class="toggle-description">1-32 characters, no spaces. Used for mDNS (devicename.local) and AP SSID.</p>
+                    </div>
+                    <input type="submit" style="background-color: #4CAF50;" value="Save Device Name">
+                </form>
+            </div>
+        </div>
         <!-- Lichess Settings Section -->
         <div class="settings-section">
             <div class="section-header" onclick="toggleSection('lichess')">
@@ -369,7 +386,8 @@
             lichess: false,
             board: false,
             hwconfig: false,
-            ota: false
+            ota: false,
+            device: false
         };
 
         function toggleSection(name) {
@@ -618,6 +636,45 @@
                     statusEl.style.color = '#f44336';
                 });
         }
+        // Device settings
+        function updateDeviceConfig() {
+            fetch('/device-config')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('deviceName').value = data.deviceName;
+                })
+                .catch(() => console.log('Error loading device config'));
+        }
+
+        document.getElementById('deviceNameForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('deviceName').value.trim();
+            
+            if (name.length === 0 || name.length > 32 || name.indexOf(' ') !== -1) {
+                showAlert('Invalid device name (1-32 characters, no spaces)');
+                return;
+            }
+            
+            const formData = new URLSearchParams();
+            formData.append('name', name);
+            
+            fetch('/device-config', {s
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: formData
+            })
+                .then(response => {
+                    if (response.ok) {
+                        showAlert('Device name updated! The board will reconnect with the new name.');
+                    } else {
+                        showAlert('Failed to update device name.');
+                    }
+                })
+                .catch(() => showAlert('Error updating device name.'));
+        });
+
+        // Call on page load (after updateWiFiInfo)
+        updateDeviceConfig();
 
         // Fetch info on page load
         updateWiFiInfo();
