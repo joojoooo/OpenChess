@@ -11,7 +11,8 @@
 			"**/data/**": true
 		},
 		"chat.tools.terminal.autoApprove": {
-			"~/.platformio/penv/bin/pio": true
+			"~/.platformio/penv/bin/pio": true,
+			"&": true
 		}
 	}
 }
