@@ -26,3 +26,6 @@ data/
 
 # Firmware binaries downloaded by GitHub Pages workflow (not committed to repo)
 docs/firmware/
+
+# Local notes and changes documentation (not shared in PRs)
+changes_by_m4rtini2.md
