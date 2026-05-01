@@ -10,7 +10,7 @@
 
 <body>
     <div class="container">
-        <h2>OpenChess Home [m]</h2>
+        <h2>OpenChess Home</h2>
         <!-- WiFi Settings Section -->
         <div class="settings-section">
             <div class="section-header" onclick="toggleSection('wifi')">
@@ -20,11 +20,13 @@
             <div class="section-content" id="wifi-content">
                 <form id="deviceNameForm">
                     <div class="form-group">
-                        <label for="deviceName">Device Name:</label>
+                        <label class="toggle-label" for="deviceName">Device Name</label>
                         <input type="text" name="deviceName" id="deviceName" placeholder="OpenChess" maxlength="32"
                             required>
-                        <p class="toggle-description">1-32 characters, no spaces. Used for mDNS (devicename.local) and
-                            AP SSID.</p>
+                        <p class="toggle-description">1-32 characters, no spaces. Used for mDNS (devicename.local)
+                            and
+                            AP SSID.
+                        </p>
                     </div>
                     <input type="submit" style="background-color: #4CAF50;" value="Save Device Name">
                 </form>
@@ -354,6 +356,7 @@
 
         <a href="./game.html" class="button">GameMode Selection</a>
         <a href="./board.html" class="button">View Board</a>
+        <a href="./documentation.html" class="button">Documentation</a>
     </div>
     <script>
         // Custom modal dialogs

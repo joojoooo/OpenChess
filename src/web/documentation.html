@@ -1,0 +1,556 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenChess Documentation</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <link rel="stylesheet" href="./css/styles.css">
+    <style>
+        .doc-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--dark3);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-orange);
+        }
+
+        .doc-section h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+        }
+
+        .doc-subsection {
+            margin-left: 15px;
+            margin-bottom: 15px;
+        }
+
+        .doc-subsection h4 {
+            color: var(--accent-orange);
+            font-size: 15px;
+            margin: 10px 0 5px 0;
+        }
+
+        .doc-subsection h5 {
+            color: var(--accent-orange);
+            font-size: 13px;
+            margin: 10px 0 5px 0;
+        }
+
+        .doc-subsection p {
+            margin: 5px 0;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .doc-subsection ul {
+            margin: 8px 0;
+            padding-left: 20px;
+            color: var(--text-light);
+        }
+
+        .doc-subsection ol {
+            margin: 8px 0;
+            padding-left: 20px;
+            color: var(--text-light);
+        }
+
+        .doc-subsection li {
+            margin: 5px 0;
+            line-height: 1.4;
+        }
+
+        .color-box {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            vertical-align: middle;
+            margin-right: 8px;
+            border: 1px solid #666;
+        }
+
+        .game-mode-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .mode-1-ind {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .mode-2-ind {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .mode-3-ind {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        .mode-4-ind {
+            background-color: #9C27B0;
+            color: white;
+        }
+
+        .toc {
+            background-color: var(--dark2-3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .toc h3 {
+            margin-top: 0;
+        }
+
+        .toc ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .toc li {
+            margin: 8px 0;
+            color: var(--text-light);
+            cursor: pointer;
+            text-decoration: underline;
+            color: var(--accent-orange);
+        }
+
+        .toc li:hover {
+            filter: brightness(1.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>OpenChess Documentation</h2>
+
+        <!-- Table of Contents -->
+        <div class="toc">
+            <h3>Contents</h3>
+            <ol>
+                <li onclick="smoothScroll('physical')">Physical Board Overview</li>
+                <li onclick="smoothScroll('chess-moves')">Chess Moves (Human vs Human)</li>
+                <li onclick="smoothScroll('chess-bot')">Chess Bot (vs Stockfish AI)</li>
+                <li onclick="smoothScroll('lichess')">Lichess (Online Play)</li>
+                <li onclick="smoothScroll('sensor-test')">Sensor Test (Diagnostic)</li>
+                <li onclick="smoothScroll('gestures')">User Gestures & Interactions</li>
+                <li onclick="smoothScroll('leds')">LED Animations & Feedback</li>
+                <li onclick="smoothScroll('settings')">Board Settings & Options</li>
+            </ol>
+        </div>
+
+        <!-- Physical Board Overview -->
+        <div class="doc-section" id="physical">
+            <h3>🎮 Physical Board Overview</h3>
+            <div class="doc-subsection">
+                <h4>How It Works</h4>
+                <p>OpenChess is a smart chessboard that detects piece movements using <strong>hall-effect
+                        sensors</strong> beneath each square and provides interactive feedback through a <strong>WS2812B
+                        LED strip</strong>. The board connects to WiFi and can play against Stockfish AI or facilitate
+                    online games via Lichess.</p>
+
+                <h4>Hardware Architecture</h4>
+                <ul>
+                    <li><strong>64 Hall-Effect Sensors:</strong> Detect when magnetic pieces are placed on or removed
+                        from squares</li>
+                    <li><strong>Shift Register Scanning:</strong> Efficiently reads all sensors using a column scanning
+                        pattern</li>
+                    <li><strong>LED Strip (WS2812B):</strong> Full RGB lighting with ~9 LEDs per square for animations
+                        and move visualization</li>
+                    <li><strong>GPIO Inputs:</strong> Row pins and column outputs managed by the ESP32</li>
+                    <li><strong>Calibration System:</strong> Maps physical sensor layout to logical board coordinates
+                    </li>
+                </ul>
+
+                <h4>Board Coordinates</h4>
+                <p><strong>Row 0 = Rank 8</strong> (Black's back rank, top of board)</p>
+                <p><strong>Col 0 = File A</strong> (Left side of board)</p>
+                <p>The board uses standard chess notation: squares are identified as file (a-h) + rank (1-8).</p>
+
+                <h4>Online Play</h4>
+                <p>To play against a bot, use the Lichess platform or access the OTA firmware update,
+                    you have to connect the board to the internet. The following sites need to be accessible:</p>
+                <p>pool.ntp.org, time.nist.gov, api.github.com, lichess.org, stockfish.online</p>
+            </div>
+        </div>
+
+        <!-- Chess Moves Game Mode -->
+        <div class="doc-section" id="chess-moves">
+            <h3><span class="game-mode-indicator mode-1-ind">MODE 1</span> Chess Moves (Human vs Human)</h3>
+            <div class="doc-subsection">
+                <h4>What It Is</h4>
+                <p>Play a traditional game of chess with another person on the physical board. The board detects all
+                    piece movements and validates them against chess rules. No AI opponent—perfect for playing with
+                    friends or family.</p>
+
+                <h4>Features</h4>
+                <ul>
+                    <li>Real-time move detection from piece placement on board</li>
+                    <li>LED visualization of valid moves (white LEDs on possible destination squares)</li>
+                    <li>Check detection with yellow LED warning on checked king</li>
+                    <li>Automatic pawn promotion detection (web UI overlay)</li>
+                    <li>Move history tracking and game save/resume</li>
+                    <li>Checkmate, stalemate, and draw detection</li>
+                    <li>50-move rule and threefold repetition tracking</li>
+                </ul>
+
+                <h4>How to Play</h4>
+                <ol>
+                    <li>From the home page, click <strong>GameMode Selection</strong></li>
+                    <li>Select <strong>Chess Moves</strong></li>
+                    <li>Set up the board with pieces in starting position</li>
+                    <li>Pick up a piece—available move destinations light up in white</li>
+                    <li>Place the piece on your desired square</li>
+                    <li>The board validates the move and updates automatically</li>
+                    <li>For pawn promotions, a web UI overlay lets you choose the piece</li>
+                </ol>
+
+                <h4>Game End</h4>
+                <ul>
+                    <li>Checkmate: Game ends, winner announced</li>
+                    <li>Stalemate: Draw declared</li>
+                    <li>Resign: Lift both kings to surrender (if supported)</li>
+                    <li>Draw Agreement: Can be offered via web interface</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Chess Bot Game Mode -->
+        <div class="doc-section" id="chess-bot">
+            <h3><span class="game-mode-indicator mode-2-ind">MODE 2</span> Chess Bot (vs Stockfish AI)</h3>
+            <div class="doc-subsection">
+                <h4>What It Is</h4>
+                <p>Play against <strong>Stockfish</strong>, a powerful open-source chess engine accessible via API.
+                    Choose your difficulty level and piece color, and the AI will play as your opponent. Perfect for
+                    practice and improving your chess skills.</p>
+
+                <h4>Features</h4>
+                <ul>
+                    <li>4 difficulty levels: Easy (5), Medium (8), Hard (11), Expert (15)</li>
+                    <li>Play as White or Black</li>
+                    <li>Real-time bot move calculation</li>
+                    <li>Automatic piece movement visualization (LEDs guide you to opponent's moves)</li>
+                    <li>Evaluation display showing position advantage</li>
+                    <li>Move history and game replay</li>
+                    <li>Full game save and resume capability</li>
+                </ul>
+
+                <h4>How to Play</h4>
+                <ol>
+                    <li>From the home page, click <strong>GameMode Selection</strong></li>
+                    <li>Select <strong>Chess Bot</strong></li>
+                    <li>Choose the bots color (White or Black).</li>
+                    <li>Select difficulty level:
+                        <ul>
+                            <li><strong>Easy:</strong> Quick and beatable for beginners</li>
+                            <li><strong>Medium:</strong> Balanced, recommended for most players</li>
+                            <li><strong>Hard:</strong> Strong opponent, slow calculation</li>
+                            <li><strong>Expert:</strong> Very challenging, very slow</li>
+                        </ul>
+                    </li>
+                    <li>Click <strong>Start Game</strong></li>
+                    <li>Make your move on the board</li>
+                    <li>Wait for the AI to calculate (blue LEDs indicate "thinking")</li>
+                    <li>Bot moves will be shown with LED animations</li>
+                </ol>
+
+                <h4>Game Controls</h4>
+                <ul>
+                    <li>Click <strong>View Board</strong> to see the current position and evaluation</li>
+                    <li>Use web interface to resign or offer a draw</li>
+                    <li>Board edit mode allows you to set up specific positions for practice</li>
+                </ul>
+
+                <h4>Performance Notes</h4>
+                <ul>
+                    <li>Expert difficulty may take 30+ seconds per move</li>
+                    <li>Requires stable internet connection to Stockfish API</li>
+                    <li>WiFi connection is essential</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Lichess Game Mode -->
+        <div class="doc-section" id="lichess">
+            <h3><span class="game-mode-indicator mode-3-ind">MODE 3</span> Lichess (Online Play)</h3>
+            <div class="doc-subsection">
+                <h4>What It Is</h4>
+                <p>Play live games against opponents from around the world on <strong>Lichess.org</strong>, one of the
+                    largest online chess communities. Your physical board becomes a real-time interface for online
+                    chess.</p>
+
+                <h4>Features</h4>
+                <ul>
+                    <li>Challenge players worldwide via Lichess</li>
+                    <li>Various time controls and game formats</li>
+                    <li>Real-time opponent move display on physical board</li>
+                    <li>Automatic move detection from piece placement</li>
+                    <li>Move countdown timer with LED pulse</li>
+                    <li>Full game history with analysis tools</li>
+                    <li>Integrates with your Lichess account</li>
+                </ul>
+
+                <h4>Setup Requirements</h4>
+                <ol>
+                    <li>Create a free account at <strong>lichess.org</strong></li>
+                    <li>Generate a personal API token from your Lichess account settings</li>
+                    <li>Enter the token in OpenChess home page settings (Lichess section)</li>
+                    <li>Token is saved securely on the device</li>
+                </ol>
+
+                <h4>How to Play</h4>
+                <ol>
+                    <li>Ensure Lichess API token is configured</li>
+                    <li>From the home page, click <strong>GameMode Selection</strong></li>
+                    <li>Select <strong>Lichess</strong></li>
+                    <li>A challenge invitation link is generated</li>
+                    <li>Share the link with your opponent</li>
+                    <li>Once accepted, the game starts</li>
+                    <li>Make moves on the physical board as usual</li>
+                    <li>Opponent's moves appear automatically</li>
+                </ol>
+
+                <h4>Game Flow</h4>
+                <ul>
+                    <li>Board polls Lichess every 500ms for opponent moves</li>
+                    <li>When opponent moves, LEDs highlight their move</li>
+                    <li>Your time is limited—make moves before the clock expires</li>
+                    <li>Game ends on checkmate, time expiration, resignation, or draw</li>
+                </ul>
+
+                <h4>Online Status</h4>
+                <ul>
+                    <li>WiFi connection is <strong>required</strong></li>
+                    <li>Stable connection ensures smooth gameplay</li>
+                    <li>If connection drops, game may be forfeited</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Sensor Test Mode -->
+        <div class="doc-section" id="sensor-test">
+            <h3><span class="game-mode-indicator mode-4-ind">MODE 4</span> Sensor Test (Diagnostic)</h3>
+            <div class="doc-subsection">
+                <h4>What It Is</h4>
+                <p>A diagnostic mode for testing the physical board's sensors and LEDs. Use this to verify that all 64
+                    squares are functioning properly, troubleshoot hardware issues, and calibrate the board if needed.
+                </p>
+
+                <h4>Features</h4>
+                <ul>
+                    <li>Test all 64 hall-effect sensors individually</li>
+                    <li>Verify LED functionality across the strip</li>
+                    <li>Check for dead or malfunctioning squares</li>
+                    <li>Calibration wizard for mapping sensors to coordinates</li>
+                    <li>Real-time feedback on sensor readings</li>
+                    <li>GPIO pin configuration display</li>
+                </ul>
+
+                <h4>How to Use</h4>
+                <ol>
+                    <li>From the home page, click <strong>GameMode Selection</strong></li>
+                    <li>Select <strong>Sensor Test</strong></li>
+                    <li>The board enters diagnostic mode</li>
+                    <li>Place a magnet on each square to test sensor detection</li>
+                    <li>Watch for LED response and sensor reading confirmation</li>
+                    <li>Note any squares that don't respond</li>
+                </ol>
+
+                <h4>Troubleshooting</h4>
+                <ul>
+                    <li><strong>Sensor doesn't respond:</strong> Check magnetic piece is placed directly over sensor
+                    </li>
+                    <li><strong>LED not lighting:</strong> May indicate LED strip issue—check hardware</li>
+                    <li><strong>Wrong coordinate:</strong> Board calibration may need adjustment</li>
+                </ul>
+
+                <h4>Calibration</h4>
+                <p>If the board's sensor-to-coordinate mapping is incorrect, use the calibration tool:</p>
+                <ol>
+                    <li>From the home page, scroll to <strong>LEDs & Board</strong></li>
+                    <li>Click <strong>Calibrate Board</strong></li>
+                    <li>Follow on-screen instructions to map physical pins to logical squares</li>
+                    <li>Calibration data is saved to device storage</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- User Gestures & Interactions -->
+        <div class="doc-section" id="gestures">
+            <h3>👆 User Gestures & Interactions</h3>
+            <div class="doc-subsection">
+                <h4>Physical Board Gestures</h4>
+                <ul>
+                    <li><strong>Pick Up Piece:</strong> Lift a piece from a square—LEDs show all valid destinations</li>
+                    <li><strong>Place Piece:</strong> Put piece on destination square—move is validated and applied</li>
+                    <li><strong>Resign (if supported):</strong> Lift both kings simultaneously to forfeit the game</li>
+                    <li><strong>Promote Pawn:</strong> When a pawn reaches the 8th or 1st rank, a web UI overlay appears
+                        to select promotion piece (Queen/Rook/Bishop/Knight). You have 2 minutes to decide.</li>
+                </ul>
+
+                <h4>Web Interface Interactions</h4>
+
+                <h5>Game Selection Page</h5>
+                <ul>
+                    <li><strong>Click Game Mode Card:</strong> Select a game mode (modes 1-4)</li>
+                    <li><strong>Bot Configuration:</strong> When selecting Chess Bot, a panel appears to choose color
+                        and difficulty</li>
+                </ul>
+
+                <h5>Board View Page</h5>
+                <ul>
+                    <li><strong>FEN Display:</strong> Shows current position in FEN notation</li>
+                    <li><strong>Move Navigation:</strong> Use first/prev/next/last buttons to review moves</li>
+                    <li><strong>Edit Board:</strong> Click to enter edit mode for setting up positions</li>
+                    <li><strong>Resign / Draw:</strong> Buttons to end the game or offer a draw</li>
+                    <li><strong>Game History:</strong> View list of previous games and load them</li>
+                </ul>
+
+                <h5>Settings Page</h5>
+                <ul>
+                    <li><strong>WiFi Section:</strong> Configure WiFi credentials, scan for networks</li>
+                    <li><strong>Lichess Section:</strong> Enter and manage your Lichess API token</li>
+                    <li><strong>LEDs & Board Section:</strong> Adjust brightness, dim multiplier, and calibrate</li>
+                    <li><strong>Hardware Config:</strong> Advanced GPIO pin configuration (if needed)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- LED Animations & Feedback -->
+        <div class="doc-section" id="leds">
+            <h3>💡 LED Animations & Feedback</h3>
+            <div class="doc-subsection">
+                <h4>Color Semantics</h4>
+                <p>Each LED color has a specific meaning:</p>
+                <ul>
+                    <li><span class="color-box" style="background-color: #00FFFF;"></span><strong>Cyan:</strong> Origin
+                        square (selected piece)</li>
+                    <li><span class="color-box" style="background-color: #FFFFFF;"></span><strong>White:</strong> Valid
+                        move destinations</li>
+                    <li><span class="color-box" style="background-color: #FF0000;"></span><strong>Red:</strong> Capture
+                        moves or error</li>
+                    <li><span class="color-box" style="background-color: #FFFF00;"></span><strong>Yellow:</strong> Check
+                        warning, pawn promotion</li>
+                    <li><span class="color-box" style="background-color: #FF00FF;"></span><strong>Purple:</strong> En
+                        passant capture</li>
+                    <li><span class="color-box" style="background-color: #00FF00;"></span><strong>Green:</strong> Move
+                        confirmation</li>
+                    <li><span class="color-box" style="background-color: #0000FF;"></span><strong>Blue:</strong> Bot is
+                        thinking (AI calculations)</li>
+                </ul>
+
+                <h4>Animation Types</h4>
+
+                <h5>Blink</h5>
+                <p>Square highlights fade in and out. Used for emphasizing valid moves and current position.</p>
+
+                <h5>Capture</h5>
+                <p>Expanding red/yellow wave rings emanate from the capture square. Celebratory and clear visual
+                    feedback.</p>
+
+                <h5>Promotion</h5>
+                <p>Yellow waterfall animation cascades down when a pawn is promoted. Indicates special event.</p>
+
+                <h5>Firework</h5>
+                <p>Celebration rings expand across the board. Triggered on checkmate or game end.</p>
+
+                <h5>Thinking (Bot)</h5>
+                <p>Corner LEDs breathe in and out with blue color. Shows the AI is calculating its move.</p>
+
+                <h5>Waiting</h5>
+                <p>White LEDs march around the board perimeter. Indicates waiting for opponent's move or input.</p>
+
+                <h5>Flash</h5>
+                <p>Full board flashes quickly. Used for errors, invalid moves, or critical alerts.</p>
+
+                <h5>Move Highlight</h5>
+                <p>When a move is made, the from/to squares are highlighted in green for confirmation.</p>
+            </div>
+        </div>
+
+        <!-- Board Settings & Options -->
+        <div class="doc-section" id="settings">
+            <h3>⚙️ Board Settings & Options</h3>
+            <div class="doc-subsection">
+                <h4>LED & Display Settings</h4>
+                <ul>
+                    <li><strong>Brightness (0-255):</strong> Controls overall LED intensity. Higher = brighter, lower =
+                        dimmer for evening play</li>
+                    <li><strong>Dark Square Dimming (20-100%):</strong> Multiply on dark squares for even board
+                        lighting. Lower = more dimmed dark squares</li>
+                </ul>
+
+                <h4>WiFi Configuration</h4>
+                <ul>
+                    <li><strong>Device Name:</strong> 1-32 characters, no spaces. Used for mDNS (devicename.local) and
+                        AP network SSID</li>
+                    <li><strong>Scan All Channels:</strong> Enable for mesh networks, adds ~10 seconds to WiFi
+                        connection time</li>
+                    <li><strong>Network Selection:</strong> Choose from saved networks or scan for available networks
+                    </li>
+                    <li><strong>Automatic Reconnection:</strong> Device attempts to reconnect if WiFi drops</li>
+                </ul>
+
+                <h4>Lichess Configuration</h4>
+                <ul>
+                    <li><strong>API Token:</strong> Personal authentication for Lichess online play</li>
+                    <li><strong>Token Management:</strong> Remove or update token from settings page</li>
+                    <li><strong>Status Display:</strong> Shows if token is valid and connected</li>
+                </ul>
+
+                <h4>Game History & Management</h4>
+                <ul>
+                    <li><strong>Game Library:</strong> View all saved games with metadata</li>
+                    <li><strong>Game Limit:</strong> Up to 50 games stored on device</li>
+                    <li><strong>Storage Management:</strong> Oldest games automatically deleted when storage limit
+                        approached</li>
+                    <li><strong>Game Replay:</strong> Load any previous game and review moves</li>
+                    <li><strong>PGN Export:</strong> Games can be exported in PGN format for analysis</li>
+                </ul>
+
+                <h4>Hardware Advanced Options</h4>
+                <ul>
+                    <li><strong>GPIO Pin Configuration:</strong> Customize which GPIO pins control LEDs, sensors, and
+                        shift register</li>
+                    <li><strong>Sensor Calibration:</strong> Map physical sensor positions to logical board coordinates
+                    </li>
+                    <li><strong>Board Calibration Tool:</strong> Interactive setup wizard for new hardware or
+                        troubleshooting</li>
+                </ul>
+
+                <h4>OTA Updates</h4>
+                <ul>
+                    <li><strong>Automatic Update Check:</strong> Device periodically checks GitHub for new firmware
+                        versions</li>
+                    <li><strong>Auto-Update Toggle:</strong> Enable or disable automatic firmware updates</li>
+                    <li><strong>Manual Upload:</strong> Upload firmware or web assets directly via web interface</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div style="margin-top: 30px;">
+            <a href="./index.html" class="back-button">OpenChess Home</a>
+        </div>
+    </div>
+
+    <script>
+        function smoothScroll(id) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    </script>
+</body>
+
+</html>
