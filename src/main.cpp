@@ -1,4 +1,6 @@
 #include "board_driver.h"
+#include "checkers_bot_game.h"
+#include "checkers_game.h"
 #include "chess_bot.h"
 #include "chess_engine.h"
 #include "chess_lichess.h"
@@ -15,8 +17,13 @@
 #include "sensor_test.h"
 #include "version.h"
 #include "wifi_manager_esp32.h"
+#include <Arduino.h>
 #include <LittleFS.h>
 #include <time.h>
+
+// Give the AI search (Stockchicken's recursive alpha-beta) extra stack
+// headroom beyond the 8KB default loop task stack.
+SET_LOOP_TASK_STACK_SIZE(16384);
 
 // ---------------------------
 // Game State and Configuration
@@ -28,11 +35,14 @@ enum GameMode {
   MODE_BOT = 2,
   MODE_LICHESS = 3,
   MODE_SENSOR_TEST = 4,
-  MODE_CHESS_CONNECT = 5
+  MODE_CHESS_CONNECT = 5,
+  MODE_CHECKERS = 6,
+  MODE_STOCKCHICKEN = 7
 };
 
 BotConfig botConfig = {StockfishSettings::medium(), true};
 LichessConfig lichessConfig = {""};
+StockchickenConfig stockchickenConfig = StockchickenConfig::medium();
 
 BoardDriver boardDriver;
 ChessEngine chessEngine;
@@ -45,6 +55,8 @@ ChessLichess* chessLichess = nullptr;
 ChessConnect* chessConnect = nullptr;
 #endif
 SensorTest* sensorTest = nullptr;
+CheckersGame* checkersGame = nullptr;
+CheckersBotGame* checkersBotGame = nullptr;
 
 GameMode currentMode = MODE_SELECTION;
 bool modeInitialized = false;
@@ -54,6 +66,7 @@ bool resetGameSelection = true;
 void showGameSelection();
 void handleGameSelection();
 void handleBotConfigSelection();
+void handleStockchickenConfigSelection();
 void initializeSelectedMode(GameMode mode);
 bool resumeLiveGameFromFlash(bool requireBoardMatch);
 
@@ -277,6 +290,22 @@ void loop() {
           sensorTest->update();
       }
       break;
+    case MODE_CHECKERS:
+      if (checkersGame != nullptr) {
+        if (checkersGame->isGameOver())
+          showGameSelection();
+        else
+          checkersGame->update();
+      }
+      break;
+    case MODE_STOCKCHICKEN:
+      if (checkersBotGame != nullptr) {
+        if (checkersBotGame->isGameOver())
+          showGameSelection();
+        else
+          checkersBotGame->update();
+      }
+      break;
 #ifdef CHESSCONNECT_ENABLED
     case MODE_CHESS_CONNECT:
       if (chessConnect != nullptr) {
@@ -310,21 +339,28 @@ void showGameSelection() {
   boardDriver.setSquareLED(4, 3, LedColors::Yellow);
   // Position 4: Sensor Test (row 4, col 4) - Red
   boardDriver.setSquareLED(4, 4, LedColors::Red);
+  // Position 5: Checkers (row 2, col 3) - Purple
+  boardDriver.setSquareLED(3, 7, LedColors::Purple);
+  // Position 6: Checkers vs Stockchicken (row 2, col 4) - Cyan
+  boardDriver.setSquareLED(4, 7, LedColors::Cyan);
   boardDriver.showLEDs();
   boardDriver.releaseLEDs();
   webLog.println("=============== Game Selection Mode ===============");
-  webLog.println("Four LEDs are lit in the center of the board:");
+  webLog.println("Six LEDs are lit in the center of the board:");
   webLog.println("  Blue:   Chess Moves (Human vs Human)");
   webLog.println("  Green:  Chess Bot (Human vs AI)");
   webLog.println("  Yellow: Lichess (Play online games)");
   webLog.println("  Red:    Sensor Test");
-  webLog.println("Place any chess piece on a LED to select that mode");
+  webLog.println("  Purple: Checkers (Human vs Human)");
+  webLog.println("  Cyan:   Checkers vs Stockchicken (Human vs AI)");
+  webLog.println("Place any piece on a LED to select that mode");
   webLog.println("===================================================");
 }
 
 void handleGameSelection() {
   boardDriver.readSensors();
-  bool currState[4] = {boardDriver.getSensorState(3, 3), boardDriver.getSensorState(3, 4), boardDriver.getSensorState(4, 3), boardDriver.getSensorState(4, 4)};
+  const int SELECTOR_COUNT = 6;
+  bool currState[SELECTOR_COUNT] = {boardDriver.getSensorState(3, 3), boardDriver.getSensorState(3, 4), boardDriver.getSensorState(4, 3), boardDriver.getSensorState(4, 4), boardDriver.getSensorState(3, 7), boardDriver.getSensorState(4, 7)};
 
   struct SelectorState {
     int emptyCount;
@@ -332,17 +368,17 @@ void handleGameSelection() {
     bool readyForSelection;
   };
   const int DEBOUNCE_CYCLES = (DEBOUNCE_MS / SENSOR_READ_DELAY_MS) + 2;
-  static SelectorState selectorStates[4] = {};
+  static SelectorState selectorStates[SELECTOR_COUNT] = {};
 
   if (resetGameSelection) {
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < SELECTOR_COUNT; ++i) {
       selectorStates[i].emptyCount = 0;
       selectorStates[i].occupiedCount = 0;
       selectorStates[i].readyForSelection = false;
     }
     resetGameSelection = false;
   }
-  for (int i = 0; i < 4; ++i) {
+  for (int i = 0; i < SELECTOR_COUNT; ++i) {
     if (!currState[i]) {
       if (selectorStates[i].emptyCount < DEBOUNCE_CYCLES)
         selectorStates[i].emptyCount++;
@@ -361,7 +397,7 @@ void handleGameSelection() {
   }
 
   // Check for valid rising edge (empty for DEBOUNCE_CYCLES, then occupied for DEBOUNCE_CYCLES)
-  for (int i = 0; i < 4; ++i) {
+  for (int i = 0; i < SELECTOR_COUNT; ++i) {
     if (selectorStates[i].readyForSelection && selectorStates[i].occupiedCount >= DEBOUNCE_CYCLES) {
       switch (i) {
         case 0:
@@ -389,6 +425,19 @@ void handleGameSelection() {
           currentMode = MODE_SENSOR_TEST;
           modeInitialized = false;
           boardDriver.clearAllLEDs();
+          break;
+        case 4:
+          webLog.println("Mode: 'Checkers' Selected!");
+          currentMode = MODE_CHECKERS;
+          modeInitialized = false;
+          boardDriver.clearAllLEDs();
+          break;
+        case 5:
+          webLog.println("Mode: 'Checkers vs Stockchicken' Selected! Showing difficulty selection...");
+          currentMode = MODE_STOCKCHICKEN;
+          modeInitialized = false;
+          boardDriver.clearAllLEDs();
+          handleStockchickenConfigSelection();
           break;
       }
       break;
@@ -432,6 +481,20 @@ void initializeSelectedMode(GameMode mode) {
         delete sensorTest;
       sensorTest = new SensorTest(&boardDriver);
       sensorTest->begin();
+      break;
+    case MODE_CHECKERS:
+      webLog.println("Starting 'Checkers'...");
+      if (checkersGame != nullptr)
+        delete checkersGame;
+      checkersGame = new CheckersGame(&boardDriver);
+      checkersGame->begin();
+      break;
+    case MODE_STOCKCHICKEN:
+      webLog.printf("Starting 'Checkers vs Stockchicken' (Depth: %d)...\n", stockchickenConfig.depth);
+      if (checkersBotGame != nullptr)
+        delete checkersBotGame;
+      checkersBotGame = new CheckersBotGame(&boardDriver, stockchickenConfig);
+      checkersBotGame->begin();
       break;
 #ifdef CHESSCONNECT_ENABLED
     case MODE_CHESS_CONNECT:
@@ -516,6 +579,54 @@ void handleBotConfigSelection() {
         }
         prevState[rowIdx][col] = curr;
       }
+    }
+
+    firstLoop = false;
+    delay(SENSOR_READ_DELAY_MS);
+  }
+}
+
+void handleStockchickenConfigSelection() {
+  int row = 4;
+  webLog.println("====== Stockchicken Difficulty Selection ======");
+  webLog.println("You play White. Select Stockchicken's search depth:");
+  webLog.println("- File B: Easy (depth 2)");
+  webLog.println("- File D: Medium (depth 4)");
+  webLog.println("- File F: Hard (depth 6)");
+
+  boardDriver.acquireLEDs();
+  boardDriver.setSquareLED(row, 1, LedColors::Green);
+  boardDriver.setSquareLED(row, 3, LedColors::Yellow);
+  boardDriver.setSquareLED(row, 5, LedColors::Red);
+  boardDriver.showLEDs();
+  boardDriver.releaseLEDs();
+
+  webLog.println("Waiting for difficulty selection...");
+
+  static bool prevState[8] = {};
+  bool firstLoop = true;
+
+  while (true) {
+    boardDriver.readSensors();
+
+    for (int col : {1, 3, 5}) {
+      bool curr = boardDriver.getSensorState(row, col);
+      // Only accept selection if square was previously empty and is now occupied
+      if (!firstLoop && !prevState[col] && curr) {
+        if (col == 1) {
+          stockchickenConfig = StockchickenConfig::easy();
+          webLog.println("Configuration: Stockchicken Easy (depth 2)");
+        } else if (col == 3) {
+          stockchickenConfig = StockchickenConfig::medium();
+          webLog.println("Configuration: Stockchicken Medium (depth 4)");
+        } else {
+          stockchickenConfig = StockchickenConfig::hard();
+          webLog.println("Configuration: Stockchicken Hard (depth 6)");
+        }
+        boardDriver.clearAllLEDs();
+        return;
+      }
+      prevState[col] = curr;
     }
 
     firstLoop = false;
