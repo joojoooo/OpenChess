@@ -55,9 +55,10 @@ void ChessBot::update() {
     }
   } else {
     // Bot's turn
-    makeBotMove();
-    updateGameStatus();
-    wifiManager->updateBoardState(currentFEN(), currentEvaluation);
+    if (makeBotMove()) {
+      updateGameStatus();
+      wifiManager->updateBoardState(currentFEN(), currentEvaluation);
+    }
   }
 
   boardDriver->updateSensorPrev();
@@ -125,7 +126,7 @@ bool ChessBot::parseStockfishResponse(const String& response, String& bestMove, 
   return true;
 }
 
-void ChessBot::makeBotMove() {
+bool ChessBot::makeBotMove() {
   webLog.println("=== BOT MOVE CALCULATION ===");
   std::atomic<bool>* stopAnimation = boardDriver->startThinkingAnimation();
   String bestMove;
@@ -146,17 +147,22 @@ void ChessBot::makeBotMove() {
       bool isBotPiece = (botPlaysWhite && piece >= 'A' && piece <= 'Z') || (!botPlaysWhite && piece >= 'a' && piece <= 'z');
       if (!isBotPiece) {
         webLog.printf("ERROR: Bot tried to move a %s piece, but bot plays %s. Piece at source: %c\n", (piece >= 'A' && piece <= 'Z') ? "WHITE" : "BLACK", botPlaysWhite ? "WHITE" : "BLACK", piece);
-        return;
+        delay(1000);
+        return false;
       }
       if (piece == ' ') {
         webLog.println("ERROR: Bot tried to move from an empty square!");
-        return;
+        delay(1000);
+        return false;
       }
       applyMove(fromRow, fromCol, toRow, toCol, (bestMove.length() >= 5) ? bestMove[4] : ' ', true);
-    } else {
-      webLog.println("Failed to parse Stockfish UCI move: " + bestMove);
+      return true;
     }
+    webLog.println("Failed to parse Stockfish UCI move: " + bestMove);
+    delay(1000);
+    return false;
   }
+  return false;
 }
 
 void ChessBot::waitForRemoteMoveCompletion(int fromRow, int fromCol, int toRow, int toCol, bool isCapture, bool isEnPassant, int enPassantCapturedPawnRow) {
