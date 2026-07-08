@@ -19,8 +19,10 @@ class ChessBot : public ChessGame {
   String makeStockfishRequest(const String& fen);
   bool parseStockfishResponse(const String& response, String& bestMove, float& evaluation);
 
-  // Game flow (Stockfish-specific)
-  void makeBotMove();
+  // Game flow (Stockfish-specific). Returns false if no move was actually
+  // applied (parse failure, desynced piece colour, etc.) so the caller
+  // doesn't advance the turn on a no-op.
+  bool makeBotMove();
 
  protected:
   float currentEvaluation; // Evaluation (in pawns, positive = White advantage)
