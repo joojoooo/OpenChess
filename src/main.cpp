@@ -28,7 +28,8 @@ enum GameMode {
   MODE_BOT = 2,
   MODE_LICHESS = 3,
   MODE_SENSOR_TEST = 4,
-  MODE_CHESS_CONNECT = 5
+  MODE_CHESS_CONNECT = 5,
+  MODE_CERTABO = 6
 };
 
 BotConfig botConfig = {StockfishSettings::medium(), true};
@@ -221,6 +222,16 @@ void loop() {
   }
 
 #ifdef CHESSCONNECT_ENABLED
+  BLEBoard* activeBleBoard = chessConnectGetActiveBoard();
+  if (activeBleBoard && activeBleBoard->usesPresenceDumbMode() && activeBleBoard->isConnected()) {
+    if (currentMode == MODE_SELECTION) {
+      webLog.println("[BLE] Certabo dumb e-board connected");
+      currentMode = MODE_CERTABO;
+      modeInitialized = false;
+      boardDriver.clearAllLEDs();
+    }
+  }
+
   if (chessConnectHasNewGame()) {
     if (currentMode == MODE_SELECTION || currentMode == MODE_CHESS_CONNECT) {
       webLog.println("[BLE] New game from ChessConnect");
@@ -286,6 +297,15 @@ void loop() {
           chessConnect->update();
       }
       break;
+    case MODE_CERTABO: {
+      BLEBoard* active = chessConnectGetActiveBoard();
+      if (!active || !active->usesPresenceDumbMode() || !active->isConnected()) {
+        showGameSelection();
+      } else {
+        active->updatePresence(boardDriver);
+      }
+      break;
+    }
 #endif
     default:
       showGameSelection();
@@ -440,6 +460,10 @@ void initializeSelectedMode(GameMode mode) {
         delete chessConnect;
       chessConnect = new ChessConnect(&boardDriver, &chessEngine, &wifiManager);
       chessConnect->begin();
+      break;
+    case MODE_CERTABO:
+      webLog.println("Starting 'Certabo dumb e-board Mode'...");
+      boardDriver.clearAllLEDs();
       break;
 #endif
     default:
